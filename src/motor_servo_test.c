@@ -162,7 +162,7 @@ void servo_test() {
     e_prev = e;
     motor_pwm(&motor_1, u);
 
-    printf("%d %d %6.3f\n", target, pos, u);
+    printf("%d %d\n", target, pos, u);
 }
 
 int main() {
