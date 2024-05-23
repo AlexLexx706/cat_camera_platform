@@ -33,12 +33,16 @@ add_executable(encoder_test
   src/encoder_test.c
 )
 
+add_executable(motor_servo_test
+  src/motor_servo_test.c
+)
+
 pico_enable_stdio_usb(motor_test 1)
 pico_enable_stdio_uart(motor_test 1)
 pico_enable_stdio_uart(icm42688_test 1)
 pico_enable_stdio_uart(vl53l0x_test 1)
 pico_enable_stdio_uart(encoder_test 1)
-
+pico_enable_stdio_uart(motor_servo_test 1)
 
 pico_enable_stdio_usb(blink 1)
 pico_enable_stdio_uart(blink 1)
@@ -55,6 +59,8 @@ pico_enable_stdio_uart(vl53l0x_test 1)
 pico_enable_stdio_usb(encoder_test 1)
 pico_enable_stdio_uart(encoder_test 1)
 
+pico_enable_stdio_usb(motor_servo_test 1)
+pico_enable_stdio_uart(motor_servo_test 1)
 
 pico_add_extra_outputs(blink)
 pico_add_extra_outputs(motor_test)
@@ -62,6 +68,7 @@ pico_add_extra_outputs(motor_pwm_test)
 pico_add_extra_outputs(icm42688_test)
 pico_add_extra_outputs(vl53l0x_test)
 pico_add_extra_outputs(encoder_test)
+pico_add_extra_outputs(motor_servo_test)
 
 target_link_libraries(motor_test pico_stdlib hardware_pwm)
 target_link_libraries(blink pico_stdlib hardware_pwm)
@@ -69,3 +76,4 @@ target_link_libraries(motor_pwm_test pico_stdlib hardware_pwm)
 target_link_libraries(icm42688_test pico_stdlib hardware_spi)
 target_link_libraries(vl53l0x_test pico_stdlib hardware_i2c)
 target_link_libraries(encoder_test pico_stdlib)
+target_link_libraries(motor_servo_test pico_stdlib hardware_pwm)
