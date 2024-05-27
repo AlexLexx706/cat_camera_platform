@@ -129,7 +129,7 @@ float e_integral = 0;
 
 // PID constants
 float k_p = 1000;
-float k_d = 0.0;
+float k_d = 20;
 float k_i = 0.0;
 
 static inline uint64_t micros() {return to_us_since_boot(get_absolute_time());}
@@ -162,7 +162,8 @@ void servo_test() {
     e_prev = e;
     motor_pwm(&motor_1, u);
 
-    printf("%d %d\n", target, pos, u);
+    printf("%d %d %f\n", target, pos, u);
+    sleep_ms(10);
 }
 
 int main() {

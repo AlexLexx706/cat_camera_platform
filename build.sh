@@ -1,6 +1,7 @@
 #!/bin/bash
+export PICO_SDK_PATH=$PWD/../pico-sdk/
+export FREERTOS_KERNEL_PATH=$PWD/../FreeRTOS-Kernel
 mkdir build
 cd build
-export PICO_SDK_PATH=../../pico-sdk/
 cmake ..
 make -j9
