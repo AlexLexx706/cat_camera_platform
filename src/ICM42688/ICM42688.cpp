@@ -27,7 +27,7 @@ ICM42688::ICM42688() {
 /* starts communication with the ICM42688 */
 int ICM42688::begin() {
     // This example will use SPI0 at 0.5MHz.
-    spi_init(SPI_PORT, 500 * 1000);
+    spi_init(SPI_PORT, 10 * 1000000);
     gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
     gpio_set_function(PIN_SCK, GPIO_FUNC_SPI);
     gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
