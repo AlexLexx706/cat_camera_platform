@@ -8,6 +8,7 @@ import threading
 import time
 import signal
 from serial.tools import list_ports
+import random
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
@@ -47,6 +48,7 @@ class SettingFrame(QtWidgets.QFrame):
 
         self.push_button_clear = QtWidgets.QPushButton("Clear")
         self.push_button_pause = QtWidgets.QPushButton("Pause")
+        self.check_box_flat_mode = QtWidgets.QCheckBox("Flat_mode")
 
         h_box_layout_graphs = QtWidgets.QHBoxLayout(self)
         v_box_layout.addLayout(h_box_layout_graphs)
@@ -55,6 +57,7 @@ class SettingFrame(QtWidgets.QFrame):
         h_box_layout_graphs.addWidget(self.combo_box_splitter)
         h_box_layout_graphs.addWidget(self.push_button_clear)
         h_box_layout_graphs.addWidget(self.push_button_pause)
+        h_box_layout_graphs.addWidget(self.check_box_flat_mode)
         h_box_layout_graphs.addSpacerItem(QtWidgets.QSpacerItem(
             0, 0, QtWidgets.QSizePolicy.Expanding))
 
@@ -137,6 +140,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         # Temperature vs time plot
+        self.points = {}
+
         self.plot_graph = pyqtgraph.PlotWidget(self)
         self.setCentralWidget(self.plot_graph)
         self.plot_graph.setLabel("left", "value")
@@ -156,7 +161,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.settings_frame.push_button_open.clicked.connect(self.on_open_port)
         self.settings_frame.push_button_clear.clicked.connect(self.clear)
         self.settings_frame.push_button_pause.clicked.connect(self.pause)
-
+        self.settings_frame.check_box_flat_mode.toggled.connect(
+            self.flat_mode_changed)
         self.curves = {}
         self.exit_flag = threading.Event()
         self.ser = None
@@ -213,6 +219,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.plot_graph.clear()
             self.results = {}
             self.curves = {}
+            self.points = {}
 
     def pause(self):
         if self.timer.isActive():
@@ -221,6 +228,14 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.timer.start(self.UPDATE_RATE)
             self.settings_frame.push_button_pause.clicked.setText("Pause")
+
+    def flat_mode_changed(self, state):
+        if state:
+            self.plot_graph.setAspectLocked(lock=True)
+            self.clear()
+        else:
+            self.plot_graph.setAspectLocked(lock=False)
+            self.clear()
 
     def read_serial(self):
         spliter = self.settings_frame.combo_box_splitter.currentData()
@@ -250,6 +265,12 @@ class MainWindow(QtWidgets.QMainWindow):
         with self.lock:
             res = self.results
             self.results = {}
+            # cur_time = time.time()
+            # x = random.random() * 2. - 1.
+            # y = random.random() * 2. - 1.
+            # res = {
+            #     0:[[cur_time], [x]],
+            #     1:[[cur_time], [y]]}
             return res
 
     def update(self):
@@ -258,29 +279,60 @@ class MainWindow(QtWidgets.QMainWindow):
         if not res:
             return
         max_len = self.settings_frame.spin_box_max_points.value()
-        for index, data in res.items():
-            _time, val = data
-            desc = self.curves.setdefault(index, {})
-            desc.setdefault('time', []).extend(_time)
-            desc.setdefault('val', []).extend(val)
-            desc['time'] = desc['time'][-max_len:]
-            desc['val'] = desc['val'][-max_len:]
 
-            if 'curve' not in desc:
-                curve = pyqtgraph.PlotCurveItem()
-                pen = pyqtgraph.mkPen(
-                    self.COLOURS[index % len(self.COLOURS)],
-                    width=self.GRAPH_WIDTH)
-                curve.setPen(pen)
-                self.legend.addItem(
-                    curve,
-                    f"{index}")
+        # draw graphs
+        if not self.settings_frame.check_box_flat_mode.isChecked():
+            for index, data in res.items():
+                _time, val = data
+                desc = self.curves.setdefault(index, {})
+                desc.setdefault('time', []).extend(_time)
+                desc.setdefault('val', []).extend(val)
+                desc['time'] = desc['time'][-max_len:]
+                desc['val'] = desc['val'][-max_len:]
 
-                self.plot_graph.addItem(curve)
-                desc['curve'] = curve
-            else:
-                curve = desc['curve']
-            curve.setData(desc['time'], desc['val'])
+                if 'curve' not in desc:
+                    curve = pyqtgraph.PlotCurveItem()
+                    pen = pyqtgraph.mkPen(
+                        self.COLOURS[index % len(self.COLOURS)],
+                        width=self.GRAPH_WIDTH)
+                    curve.setPen(pen)
+                    self.legend.addItem(
+                        curve,
+                        f"{index}")
+
+                    self.plot_graph.addItem(curve)
+                    desc['curve'] = curve
+                else:
+                    curve = desc['curve']
+                curve.setData(desc['time'], desc['val'])
+        # draw points
+        else:
+            # use first and second value as x, y coordinates
+            if 0 in res and 1 in res:
+                # first points pair
+                index = 0
+                desc = self.points.setdefault(0, {'x': [], 'y': []})
+                desc['x'].extend(res[0][1])
+                desc['y'].extend(res[1][1])
+                desc['x'] = desc['x'][-max_len:]
+                desc['y'] = desc['y'][-max_len:]
+
+                # creating of scatter
+                scatter = desc.get("scatter")
+                if scatter is None:
+                    scatter = pyqtgraph.ScatterPlotItem()
+                    pen = pyqtgraph.mkPen(
+                        self.COLOURS[index % len(self.COLOURS)],
+                        width=self.GRAPH_WIDTH)
+                    scatter.setPen(pen)
+                    self.legend.addItem(
+                        scatter,
+                        f"{index}")
+
+                    self.plot_graph.addItem(scatter)
+                    desc['scatter'] = scatter
+                # update points in scatter
+                scatter.setData(desc['x'], desc['y'])
 
     def closeEvent(self, event):
         self.exit_flag.set()

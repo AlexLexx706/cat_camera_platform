@@ -7,21 +7,28 @@
 
 #define ICM42688_IRQ_PIN 22
 
-volatile bool dataReady = false;
+volatile static bool dataReady = false;
+volatile static uint32_t packet_time;
+volatile static uint32_t last_packet_time=0;
+volatile static float angles[3] = {0};
 static ICM42688 IMU;
-// SemaphoreHandle_t mutex;
+
 
 static void gpio_callback(uint gpio, uint32_t events) {
     // IMU Interrupt pin
     if (gpio == ICM42688_IRQ_PIN) {
         dataReady = true;
+        packet_time = time_us_32();
     }
 }
 
 static void test_task(void *) {
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(1000));
-        printf("test\n");
+        printf("%6.3f\t%6.3f\t%6.3f\t%6.3f\t%6.3f\t%6.3f\t%6.3f\t%6.3f\t%6.3f\t%6.3f\n", IMU.accX(),
+            IMU.accY(), IMU.accZ(), IMU.gyrX(), IMU.gyrY(), IMU.gyrZ(),
+            IMU.temp(), angles[0], angles[1], angles[2]);
+
     }
 }
 
@@ -35,10 +42,13 @@ static void process_imu(void *) {
         // read the sensor
         IMU.getAGT();
 
-        // display the data
-        printf("%6.3f\t%6.3f\t%6.3f\t%6.3f\t%6.3f\t%6.3f\t%6.3f\n", IMU.accX(),
-            IMU.accY(), IMU.accZ(), IMU.gyrX(), IMU.gyrY(), IMU.gyrZ(),
-            IMU.temp());
+        // if (last_packet_time != 0) {
+        //     float dt = (packet_time - last_packet_time) / 1e6;
+        //     angles[0] = IMU.gyrX() * dt;
+        //     angles[1] = IMU.gyrY() * dt;
+        //     angles[2] = IMU.gyrZ() * dt;
+        // }
+        // last_packet_time = packet_time;
     }
 }
 
