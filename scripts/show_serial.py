@@ -155,6 +155,7 @@ class ConsoleFrame(QtWidgets.QFrame):
                 self.combo_box_cmd.currentText())
 
             Settings.setValue("history", self.plain_text_editor.toPlainText())
+            print(f"write data:{data}")
             self.ser.write(data)
 
     def on_currentIndexChanged(self, index):
@@ -163,6 +164,9 @@ class ConsoleFrame(QtWidgets.QFrame):
             [self.combo_box_cmd.itemText(index) for index in range(self.combo_box_cmd.count())])
         Settings.setValue("last_commands_index",
                           self.combo_box_cmd.currentIndex())
+
+    def on_new_line(self, line):
+        self.plain_text_editor.appendPlainText(line.decode())
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -187,6 +191,7 @@ class MainWindow(QtWidgets.QMainWindow):
         QtGui.QColor(QtCore.Qt.darkYellow)]
 
     UPDATE_RATE = 80  # ms
+    NEW_LINE = QtCore.pyqtSignal(object)
 
     def __init__(self):
         super().__init__()
@@ -203,14 +208,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.settings_frame = SettingFrame()
 
-        self.settings_dock_widget = QtWidgets.QDockWidget("Port settings", self)
+        self.settings_dock_widget = QtWidgets.QDockWidget(
+            "Port settings", self)
         self.settings_dock_widget.setFeatures(
             QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetMovable |
             QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetFloatable)
         self.settings_dock_widget.setAllowedAreas(
             QtCore.Qt.AllDockWidgetAreas)
         self.settings_dock_widget.setWidget(self.settings_frame)
-        self.addDockWidget(QtCore.Qt.TopDockWidgetArea, self.settings_dock_widget)
+        self.addDockWidget(QtCore.Qt.TopDockWidgetArea,
+                           self.settings_dock_widget)
 
         self.settings_frame.push_button_open.clicked.connect(self.on_open_port)
         self.settings_frame.push_button_clear.clicked.connect(self.clear)
@@ -230,30 +237,33 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowState(QtCore.Qt.WindowMaximized)
 
         self.console_frame = ConsoleFrame()
+        self.NEW_LINE.connect(self.console_frame.on_new_line)
         self.console_dock_widget = QtWidgets.QDockWidget("Console", self)
         self.console_dock_widget.setFeatures(
             QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetMovable |
             QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetFloatable)
 
-
         self.console_dock_widget.setAllowedAreas(
             QtCore.Qt.AllDockWidgetAreas)
         self.console_dock_widget.setWidget(self.console_frame)
-        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.console_dock_widget)
+        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea,
+                           self.console_dock_widget)
 
-        self.file_menu = self.menuBar().addMenu("&View");
+        self.file_menu = self.menuBar().addMenu("&View")
 
         self.show_settings = QtWidgets.QAction("Settings")
         self.show_settings.setCheckable(True)
         self.show_settings.setChecked(True)
         self.file_menu.addAction(self.show_settings)
-        self.show_settings.triggered.connect(self.settings_dock_widget.setVisible)
+        self.show_settings.triggered.connect(
+            self.settings_dock_widget.setVisible)
 
         self.show_console = QtWidgets.QAction("Console")
         self.show_console.setCheckable(True)
         self.show_console.setChecked(True)
         self.file_menu.addAction(self.show_console)
-        self.show_console.triggered.connect(self.console_dock_widget.setVisible)
+        self.show_console.triggered.connect(
+            self.console_dock_widget.setVisible)
 
     def on_open_port(self):
         if self.ser is None:
@@ -315,9 +325,13 @@ class MainWindow(QtWidgets.QMainWindow):
         with self.ser:
             while not self.exit_flag.is_set():
                 row_line = self.ser.read_until(spliter)
-
                 for line in row_line.splitlines():
-                    data = line.strip().split()
+                    strip_line = line.strip()
+                    print(strip_line)
+                    if strip_line[:2] in [b'RE', b'ER']:
+                        self.NEW_LINE.emit(strip_line)
+
+                    data = strip_line.split()
                     if not data:
                         continue
                     try:
