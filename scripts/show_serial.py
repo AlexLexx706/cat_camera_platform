@@ -1,6 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+from PyQt5 import QtCore
+import os
+import sys
 from PyQt5 import QtWidgets, QtCore, QtGui
 import pyqtgraph
 import serial
@@ -9,6 +12,8 @@ import time
 import signal
 from serial.tools import list_ports
 import random
+
+Settings = QtCore.QSettings('alexlexx', 'graph_view')
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
@@ -91,12 +96,45 @@ class ConsoleFrame(QtWidgets.QFrame):
             QtWidgets.QSizePolicy.Minimum,
             QtWidgets.QSizePolicy.Fixed)
 
+        v_box_layout = QtWidgets.QVBoxLayout(self)
         h_box_layout = QtWidgets.QHBoxLayout(self)
+        v_box_layout.addLayout(h_box_layout)
+
         h_box_layout.addWidget(self.combo_box_cmd)
         h_box_layout.addWidget(self.push_button_send)
 
+        self.plain_text_editor = QtWidgets.QPlainTextEdit()
+        self.plain_text_editor.setReadOnly(True)
+        v_box_layout.addWidget(self.plain_text_editor)
+
         self.push_button_send.clicked.connect(self.send)
         self.set_serial(None, None)
+
+        self.clear_action = QtWidgets.QAction("Clear")
+        self.plain_text_editor.addAction(self.clear_action)
+        self.clear_action.triggered.connect(self.on_clear_history)
+        self.plain_text_editor.setContextMenuPolicy(
+            QtCore.Qt.ContextMenuPolicy.ActionsContextMenu)
+        self.combo_box_cmd.lineEdit().editingFinished.connect(self.send)
+        self.combo_box_cmd.currentIndexChanged.connect(
+            self.on_currentIndexChanged)
+
+        commands = Settings.value("commands")
+        last_commands_index = Settings.value("last_commands_index")
+
+        if commands is not None and last_commands_index is not None:
+            last_block = self.combo_box_cmd.blockSignals(True)
+            self.combo_box_cmd.addItems(commands)
+            self.combo_box_cmd.setCurrentIndex(int(last_commands_index))
+            self.combo_box_cmd.blockSignals(last_block)
+
+        history = Settings.value("history")
+        if history:
+            self.plain_text_editor.setPlainText(history)
+
+    def on_clear_history(self):
+        self.plain_text_editor.clear()
+        Settings.setValue("history", "")
 
     def set_serial(self, ser, splitter):
         self.ser = ser
@@ -104,14 +142,27 @@ class ConsoleFrame(QtWidgets.QFrame):
         if ser:
             self.combo_box_cmd.setEnabled(True)
             self.push_button_send.setEnabled(True)
+            self.plain_text_editor.setEnabled(True)
         else:
             self.combo_box_cmd.setEnabled(False)
             self.push_button_send.setEnabled(False)
+            self.plain_text_editor.setEnabled(False)
 
     def send(self):
         if self.ser:
             data = self.combo_box_cmd.currentText().encode() + self.splitter
+            self.plain_text_editor.appendPlainText(
+                self.combo_box_cmd.currentText())
+
+            Settings.setValue("history", self.plain_text_editor.toPlainText())
             self.ser.write(data)
+
+    def on_currentIndexChanged(self, index):
+        Settings.setValue(
+            "commands",
+            [self.combo_box_cmd.itemText(index) for index in range(self.combo_box_cmd.count())])
+        Settings.setValue("last_commands_index",
+                          self.combo_box_cmd.currentIndex())
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -265,12 +316,6 @@ class MainWindow(QtWidgets.QMainWindow):
         with self.lock:
             res = self.results
             self.results = {}
-            # cur_time = time.time()
-            # x = random.random() * 2. - 1.
-            # y = random.random() * 2. - 1.
-            # res = {
-            #     0:[[cur_time], [x]],
-            #     1:[[cur_time], [y]]}
             return res
 
     def update(self):
