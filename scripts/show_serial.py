@@ -203,11 +203,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.settings_frame = SettingFrame()
 
-        dock_widget = QtWidgets.QDockWidget("Port settings", self)
-        dock_widget.setAllowedAreas(
+        self.settings_dock_widget = QtWidgets.QDockWidget("Port settings", self)
+        self.settings_dock_widget.setFeatures(
+            QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetMovable |
+            QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetFloatable)
+        self.settings_dock_widget.setAllowedAreas(
             QtCore.Qt.AllDockWidgetAreas)
-        dock_widget.setWidget(self.settings_frame)
-        self.addDockWidget(QtCore.Qt.TopDockWidgetArea, dock_widget)
+        self.settings_dock_widget.setWidget(self.settings_frame)
+        self.addDockWidget(QtCore.Qt.TopDockWidgetArea, self.settings_dock_widget)
 
         self.settings_frame.push_button_open.clicked.connect(self.on_open_port)
         self.settings_frame.push_button_clear.clicked.connect(self.clear)
@@ -227,11 +230,30 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowState(QtCore.Qt.WindowMaximized)
 
         self.console_frame = ConsoleFrame()
-        dock_widget = QtWidgets.QDockWidget("Console", self)
-        dock_widget.setAllowedAreas(
+        self.console_dock_widget = QtWidgets.QDockWidget("Console", self)
+        self.console_dock_widget.setFeatures(
+            QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetMovable |
+            QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetFloatable)
+
+
+        self.console_dock_widget.setAllowedAreas(
             QtCore.Qt.AllDockWidgetAreas)
-        dock_widget.setWidget(self.console_frame)
-        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, dock_widget)
+        self.console_dock_widget.setWidget(self.console_frame)
+        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.console_dock_widget)
+
+        self.file_menu = self.menuBar().addMenu("&View");
+
+        self.show_settings = QtWidgets.QAction("Settings")
+        self.show_settings.setCheckable(True)
+        self.show_settings.setChecked(True)
+        self.file_menu.addAction(self.show_settings)
+        self.show_settings.triggered.connect(self.settings_dock_widget.setVisible)
+
+        self.show_console = QtWidgets.QAction("Console")
+        self.show_console.setCheckable(True)
+        self.show_console.setChecked(True)
+        self.file_menu.addAction(self.show_console)
+        self.show_console.triggered.connect(self.console_dock_widget.setVisible)
 
     def on_open_port(self):
         if self.ser is None:
