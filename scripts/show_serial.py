@@ -376,10 +376,10 @@ class MainWindow(QtWidgets.QMainWindow):
     def pause(self):
         if self.timer.isActive():
             self.timer.stop()
-            self.settings_frame.push_button_pause.clicked.setText("Play")
+            self.settings_frame.push_button_pause.setText("Play")
         else:
             self.timer.start(self.UPDATE_RATE)
-            self.settings_frame.push_button_pause.clicked.setText("Pause")
+            self.settings_frame.push_button_pause.setText("Pause")
 
     def flat_mode_changed(self, state):
         if state:
