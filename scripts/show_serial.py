@@ -1,8 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from PyQt5 import QtCore
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PySide6 import QtCore
+from PySide6 import QtWidgets, QtCore, QtGui
 import pyqtgraph
 import serial
 import threading
@@ -138,7 +138,7 @@ class ConsoleFrame(QtWidgets.QFrame):
         self.push_button_send.clicked.connect(self.send)
         self.set_serial(None, None)
 
-        self.clear_action = QtWidgets.QAction("Clear")
+        self.clear_action = QtGui.QAction("Clear")
         self.plain_text_editor.addAction(self.clear_action)
         self.clear_action.triggered.connect(self.on_clear_history)
         self.plain_text_editor.setContextMenuPolicy(
@@ -160,11 +160,11 @@ class ConsoleFrame(QtWidgets.QFrame):
         if history:
             self.plain_text_editor.setPlainText(history)
 
-        self.remove_action = QtWidgets.QAction("Remove")
+        self.remove_action = QtGui.QAction("Remove")
         self.combo_box_cmd.addAction(self.remove_action)
         self.remove_action.triggered.connect(self.on_remove_item)
 
-        self.remove_all_action = QtWidgets.QAction("Remove All")
+        self.remove_all_action = QtGui.QAction("Remove All")
         self.combo_box_cmd.addAction(self.remove_all_action)
         self.remove_all_action.triggered.connect(self.on_remove_all_item)
 
@@ -241,7 +241,7 @@ class MainWindow(QtWidgets.QMainWindow):
         QtGui.QColor(QtCore.Qt.darkYellow)]
 
     UPDATE_RATE = 80  # ms
-    NEW_LINE = QtCore.pyqtSignal(object)
+    NEW_LINE = QtCore.Signal(object)
 
     def __init__(self):
         super().__init__()
@@ -301,14 +301,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.file_menu = self.menuBar().addMenu("&View")
 
-        self.show_settings = QtWidgets.QAction("Settings")
+        self.show_settings = QtGui.QAction("Settings")
         self.show_settings.setCheckable(True)
         self.show_settings.setChecked(True)
         self.file_menu.addAction(self.show_settings)
         self.show_settings.triggered.connect(
             self.settings_dock_widget.setVisible)
 
-        self.show_console = QtWidgets.QAction("Console")
+        self.show_console = QtGui.QAction("Console")
         self.show_console.setCheckable(True)
         self.show_console.setChecked(True)
         self.file_menu.addAction(self.show_console)
@@ -316,7 +316,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.console_dock_widget.setVisible)
 
         self.help_menu = self.menuBar().addMenu("&Help")
-        self.action_about = QtWidgets.QAction("Settings")
+        self.action_about = QtGui.QAction("Settings")
         self.help_menu.addAction(self.action_about)
         self.action_about.triggered.connect(self.on_help)
 
