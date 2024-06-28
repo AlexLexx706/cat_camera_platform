@@ -81,6 +81,11 @@ class SettingFrame(QtWidgets.QFrame):
         h_box_layout_graphs.addWidget(QtWidgets.QLabel("Max points:"))
         h_box_layout_graphs.addWidget(self.spin_box_max_points)
         h_box_layout_graphs.addWidget(self.combo_box_splitter)
+        h_box_layout_graphs.addSpacerItem(QtWidgets.QSpacerItem(
+            0, 0, QtWidgets.QSizePolicy.Expanding))
+
+        h_box_layout_graphs = QtWidgets.QHBoxLayout()
+        v_box_layout.addLayout(h_box_layout_graphs)
         h_box_layout_graphs.addWidget(self.push_button_clear)
         h_box_layout_graphs.addWidget(self.push_button_pause)
         h_box_layout_graphs.addWidget(self.check_box_flat_mode)
@@ -305,14 +310,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.show_settings.setCheckable(True)
         self.show_settings.setChecked(True)
         self.file_menu.addAction(self.show_settings)
-        self.show_settings.triggered.connect(
+        self.show_settings.toggled.connect(
             self.settings_dock_widget.setVisible)
 
         self.show_console = QtGui.QAction("Console")
         self.show_console.setCheckable(True)
         self.show_console.setChecked(True)
         self.file_menu.addAction(self.show_console)
-        self.show_console.triggered.connect(
+        self.show_console.toggled.connect(
             self.console_dock_widget.setVisible)
 
         self.help_menu = self.menuBar().addMenu("&Help")
