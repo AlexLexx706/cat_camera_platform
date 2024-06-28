@@ -132,6 +132,28 @@ class ConsoleFrame(QtWidgets.QFrame):
         if history:
             self.plain_text_editor.setPlainText(history)
 
+        self.remove_action = QtWidgets.QAction("Remove")
+        self.combo_box_cmd.addAction(self.remove_action)
+        self.remove_action.triggered.connect(self.on_remove_item)
+
+        self.remove_all_action = QtWidgets.QAction("Remove All")
+        self.combo_box_cmd.addAction(self.remove_all_action)
+        self.remove_all_action.triggered.connect(self.on_remove_all_item)
+
+        self.combo_box_cmd.setContextMenuPolicy(
+            QtCore.Qt.ContextMenuPolicy.ActionsContextMenu)
+
+    def on_remove_all_item(self):
+        if QtWidgets.QMessageBox.question(
+                self,
+                'Remove all commands',
+                "Are you sure you want to remove all items?") == QtWidgets.QMessageBox.StandardButton.Yes:
+            self.combo_box_cmd.clear()
+
+    def on_remove_item(self):
+        self.combo_box_cmd.removeItem(
+            self.combo_box_cmd.currentIndex())
+
     def on_clear_history(self):
         self.plain_text_editor.clear()
         Settings.setValue("history", "")
@@ -155,7 +177,6 @@ class ConsoleFrame(QtWidgets.QFrame):
                 self.combo_box_cmd.currentText())
 
             Settings.setValue("history", self.plain_text_editor.toPlainText())
-            print(f"write data:{data}")
             self.ser.write(data)
 
     def on_currentIndexChanged(self, index):
@@ -327,7 +348,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 row_line = self.ser.read_until(spliter)
                 for line in row_line.splitlines():
                     strip_line = line.strip()
-                    print(strip_line)
                     if strip_line[:2] in [b'RE', b'ER']:
                         self.NEW_LINE.emit(strip_line)
 
