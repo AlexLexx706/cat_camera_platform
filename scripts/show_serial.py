@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from PyQt5 import QtCore
-import os
-import sys
 from PyQt5 import QtWidgets, QtCore, QtGui
 import pyqtgraph
 import serial
@@ -11,10 +9,8 @@ import threading
 import time
 import signal
 from serial.tools import list_ports
-import random
 
 Settings = QtCore.QSettings('alexlexx', 'graph_view')
-
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
