@@ -385,9 +385,13 @@ class MainWindow(QtWidgets.QMainWindow):
         if state:
             self.plot_graph.setAspectLocked(lock=True)
             self.clear()
+            self.plot_graph.setLabel("left", "Y")
+            self.plot_graph.setLabel("bottom", "X")
         else:
             self.plot_graph.setAspectLocked(lock=False)
             self.clear()
+            self.plot_graph.setLabel("left", "value")
+            self.plot_graph.setLabel("bottom", "time")
 
     def read_serial(self):
         spliter = self.settings_frame.combo_box_splitter.currentData()
