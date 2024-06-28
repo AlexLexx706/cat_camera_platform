@@ -326,8 +326,10 @@ class MainWindow(QtWidgets.QMainWindow):
             "Help",
             "Purpose of the application:\nThe application reads data from the COM port, "
             "parses each line as a set of floats separated by spaces/tabs, "
-            "and then displays the data on graphs. "
+            "and then displays the data on graphs. \n"
             "The timestamp used is the moment when the data is read from the port.\n\n"
+            "This is my attempt to fight against the stupid implementation of  "
+            "Serial Monitor and Serial Plotter in the Arduino IDE.\n\n"
             "Author:\n"
             "Alexey Kalmykov\n"
             "alexlexx1@gmail.com")
