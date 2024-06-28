@@ -22,6 +22,7 @@ class SettingFrame(QtWidgets.QFrame):
     def __init__(self):
         super().__init__()
         self.combo_box_port_path = QtWidgets.QComboBox()
+        self.combo_box_port_path.setToolTip("Path to the COM port file")
         for desc in list_ports.comports():
             self.combo_box_port_path.addItem(desc.device)
         dev_id = self.combo_box_port_path.findText("/dev/ttyACM0")
@@ -29,7 +30,10 @@ class SettingFrame(QtWidgets.QFrame):
         self.combo_box_port_path.setEditable(True)
 
         self.push_button_open = QtWidgets.QPushButton("Open")
+        self.push_button_open.setToolTip(
+            "Open/Close the COM port for reading/writing.")
         self.combo_box_speed = QtWidgets.QComboBox()
+        self.combo_box_speed.setToolTip("List of standard COM port speeds")
         for speed in serial.Serial.BAUDRATES:
             self.combo_box_speed.addItem(str(speed), speed)
         self.combo_box_speed.setCurrentIndex(
@@ -38,24 +42,45 @@ class SettingFrame(QtWidgets.QFrame):
         self.combo_box_splitter = QtWidgets.QComboBox()
         self.combo_box_splitter.addItem('CR(\\r)', b'\r')
         self.combo_box_splitter.addItem('LF(\\n)', b'\n')
+        self.combo_box_splitter.setToolTip(
+            "End-of-line character used for parsing data streams.")
 
         self.spin_box_max_points = QtWidgets.QSpinBox()
         self.spin_box_max_points.setMaximum(2147483647)
         self.spin_box_max_points.setValue(10000)
+        self.spin_box_max_points.setToolTip(
+            "Maximum number of points displayed on graphs.")
 
         self.spin_box_max_points.setSizePolicy(
             QtWidgets.QSizePolicy.Minimum,
             QtWidgets.QSizePolicy.Fixed)
 
         v_box_layout = QtWidgets.QVBoxLayout(self)
-        h_box_layout = QtWidgets.QHBoxLayout(self)
+        h_box_layout = QtWidgets.QHBoxLayout()
         v_box_layout.addLayout(h_box_layout)
 
         self.push_button_clear = QtWidgets.QPushButton("Clear")
-        self.push_button_pause = QtWidgets.QPushButton("Pause")
-        self.check_box_flat_mode = QtWidgets.QCheckBox("Flat_mode")
+        self.push_button_clear.setToolTip(
+            "Delete all data displayed on the graphs.")
 
-        h_box_layout_graphs = QtWidgets.QHBoxLayout(self)
+        self.push_button_pause = QtWidgets.QPushButton("Pause")
+        self.push_button_pause.setToolTip(
+            "Suspend updating data on the graphs "
+            "(data is not lost, it accumulates in the background).")
+
+        self.check_box_flat_mode = QtWidgets.QCheckBox("Flat_mode")
+        self.check_box_flat_mode.setToolTip(
+            "This mode replaces the time-based display with a "
+            "dot display (data for the dots: "
+            "x - the first element of the row, y - the second element).")
+
+        self.check_box_show_only_cmd_response = QtWidgets.QCheckBox(
+            "Only response")
+        self.check_box_show_only_cmd_response.setToolTip(
+            "Display only responses to commands "
+            "(everything that starts with RE and ER) in the console.")
+
+        h_box_layout_graphs = QtWidgets.QHBoxLayout()
         v_box_layout.addLayout(h_box_layout_graphs)
         h_box_layout_graphs.addWidget(QtWidgets.QLabel("Max points:"))
         h_box_layout_graphs.addWidget(self.spin_box_max_points)
@@ -63,6 +88,7 @@ class SettingFrame(QtWidgets.QFrame):
         h_box_layout_graphs.addWidget(self.push_button_clear)
         h_box_layout_graphs.addWidget(self.push_button_pause)
         h_box_layout_graphs.addWidget(self.check_box_flat_mode)
+        h_box_layout_graphs.addWidget(self.check_box_show_only_cmd_response)
         h_box_layout_graphs.addSpacerItem(QtWidgets.QSpacerItem(
             0, 0, QtWidgets.QSizePolicy.Expanding))
 
@@ -84,7 +110,11 @@ class ConsoleFrame(QtWidgets.QFrame):
         super().__init__()
         self.combo_box_cmd = QtWidgets.QComboBox()
         self.combo_box_cmd.setEditable(True)
+        self.combo_box_cmd.setToolTip(
+            "Enter a new command and press the Enter button to send "
+            "(includes command history).")
         self.push_button_send = QtWidgets.QPushButton("Send")
+        self.push_button_send.setToolTip("Send command to port.")
         self.ser = None
         self.splitter = None
 
@@ -97,13 +127,15 @@ class ConsoleFrame(QtWidgets.QFrame):
             QtWidgets.QSizePolicy.Fixed)
 
         v_box_layout = QtWidgets.QVBoxLayout(self)
-        h_box_layout = QtWidgets.QHBoxLayout(self)
+        h_box_layout = QtWidgets.QHBoxLayout()
         v_box_layout.addLayout(h_box_layout)
 
         h_box_layout.addWidget(self.combo_box_cmd)
         h_box_layout.addWidget(self.push_button_send)
 
         self.plain_text_editor = QtWidgets.QPlainTextEdit()
+        self.plain_text_editor.setToolTip(
+            "Displays incoming stream from the COM port.")
         self.plain_text_editor.setReadOnly(True)
         v_box_layout.addWidget(self.plain_text_editor)
 
@@ -145,9 +177,10 @@ class ConsoleFrame(QtWidgets.QFrame):
 
     def on_remove_all_item(self):
         if QtWidgets.QMessageBox.question(
-                self,
-                'Remove all commands',
-                "Are you sure you want to remove all items?") == QtWidgets.QMessageBox.StandardButton.Yes:
+            self,
+            'Remove all commands',
+            "Are you sure you want to remove all items?") ==\
+                QtWidgets.QMessageBox.StandardButton.Yes:
             self.combo_box_cmd.clear()
 
     def on_remove_item(self):
@@ -216,7 +249,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self):
         super().__init__()
-        # Temperature vs time plot
+        self.setWindowTitle("Graph View")
         self.points = {}
 
         self.plot_graph = pyqtgraph.PlotWidget(self)
@@ -286,6 +319,23 @@ class MainWindow(QtWidgets.QMainWindow):
         self.show_console.triggered.connect(
             self.console_dock_widget.setVisible)
 
+        self.help_menu = self.menuBar().addMenu("&Help")
+        self.action_about = QtWidgets.QAction("Settings")
+        self.help_menu.addAction(self.action_about)
+        self.action_about.triggered.connect(self.on_help)
+
+    def on_help(self):
+        QtWidgets.QMessageBox.about(
+            self,
+            "Help",
+            "Purpose of the application:\nThe application reads data from the COM port, "
+            "parses each line as a set of floats separated by spaces/tabs, "
+            "and then displays the data on graphs. "
+            "The timestamp used is the moment when the data is read from the port.\n\n"
+            "Author:\n"
+            "Alexey Kalmykov\n"
+            "alexlexx1@gmail.com")
+
     def on_open_port(self):
         if self.ser is None:
             try:
@@ -348,7 +398,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 row_line = self.ser.read_until(spliter)
                 for line in row_line.splitlines():
                     strip_line = line.strip()
-                    if strip_line[:2] in [b'RE', b'ER']:
+                    if self.settings_frame.check_box_show_only_cmd_response.isChecked() and\
+                            strip_line[:2] in [b'RE', b'ER']:
                         self.NEW_LINE.emit(strip_line)
 
                     data = strip_line.split()
