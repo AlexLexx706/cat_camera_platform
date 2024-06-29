@@ -44,15 +44,16 @@ class SettingFrame(QtWidgets.QFrame):
             self.combo_box_speed.findData(speed))
         self.combo_box_speed.currentIndexChanged.connect(self.on_speed_changed)
 
-        self.check_box_string_parsing = QtWidgets.QCheckBox("Line parsing")
-        self.check_box_string_parsing.setToolTip(
+        self.group_box_line_parsing = QtWidgets.QGroupBox(self)
+        self.group_box_line_parsing.setTitle('Line parsing')
+        self.group_box_line_parsing.setToolTip(
             "Enable string parsing mode to display graphs")
-        self.check_box_string_parsing.toggled.connect(
+        self.group_box_line_parsing.setCheckable(True)
+        self.group_box_line_parsing.toggled.connect(
             self.on_string_parsing_changed)
         string_parsing = Settings.value("string_parsing")
-        string_parsing = int(
-            string_parsing) if string_parsing is not None else 1
-        self.check_box_string_parsing.setChecked(string_parsing)
+        string_parsing = int(string_parsing) if string_parsing is not None else 1
+        self.group_box_line_parsing.setChecked(string_parsing)
 
         self.spin_box_max_points = QtWidgets.QSpinBox()
         self.spin_box_max_points.setMaximum(2147483647)
@@ -89,11 +90,10 @@ class SettingFrame(QtWidgets.QFrame):
             "Display only responses to commands "
             "(everything that starts with RE and ER) in the console.")
 
-        h_box_layout_graphs = QtWidgets.QHBoxLayout()
-        v_box_layout.addLayout(h_box_layout_graphs)
+        h_box_layout_graphs = QtWidgets.QHBoxLayout(self.group_box_line_parsing)
+        v_box_layout.addWidget(self.group_box_line_parsing)
         h_box_layout_graphs.addWidget(QtWidgets.QLabel("Max points:"))
         h_box_layout_graphs.addWidget(self.spin_box_max_points)
-        h_box_layout_graphs.addWidget(self.check_box_string_parsing)
         h_box_layout_graphs.addWidget(self.push_button_clear)
         h_box_layout_graphs.addWidget(self.push_button_pause)
         h_box_layout_graphs.addWidget(self.check_box_flat_mode)
@@ -379,10 +379,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.settings_frame.push_button_open.setText("close")
                 self.settings_frame.combo_box_port_path.setEnabled(False)
                 self.settings_frame.combo_box_speed.setEnabled(False)
-                self.settings_frame.check_box_string_parsing.setEnabled(False)
+                self.settings_frame.group_box_line_parsing.setEnabled(False)
                 self.console_frame.set_serial(
                     self.ser,
-                    self.settings_frame.check_box_string_parsing.isChecked())
+                    self.settings_frame.group_box_line_parsing.isChecked())
 
             except serial.serialutil.SerialException as e:
                 QtWidgets.QMessageBox.warning(
@@ -394,7 +394,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.settings_frame.push_button_open.setText("open")
             self.settings_frame.combo_box_port_path.setEnabled(True)
             self.settings_frame.combo_box_speed.setEnabled(True)
-            self.settings_frame.check_box_string_parsing.setEnabled(True)
+            self.settings_frame.group_box_line_parsing.setEnabled(True)
             self.console_frame.set_serial(None, None)
 
     def clear(self, remove_items=True):
@@ -432,7 +432,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.plot_graph.setLabel("bottom", "time")
 
     def read_serial(self):
-        is_string_parsing = self.settings_frame.check_box_string_parsing.isChecked()
+        is_string_parsing = self.settings_frame.group_box_line_parsing.isChecked()
         with self.ser:
             # row mode
             if not is_string_parsing:
