@@ -21,9 +21,14 @@ class SettingFrame(QtWidgets.QFrame):
         self.combo_box_port_path.setToolTip("Path to the COM port file")
         for desc in list_ports.comports():
             self.combo_box_port_path.addItem(desc.device)
-        dev_id = self.combo_box_port_path.findText("/dev/ttyACM0")
+        port_path = Settings.value("port_path")
+        dev_id = self.combo_box_port_path.findText(
+            port_path if port_path is not None else "/dev/ttyACM0")
+
         self.combo_box_port_path.setCurrentIndex(0 if dev_id == -1 else dev_id)
         self.combo_box_port_path.setEditable(True)
+        self.combo_box_port_path.currentTextChanged.connect(
+            self.on_port_changed)
 
         self.push_button_open = QtWidgets.QPushButton("Open")
         self.push_button_open.setToolTip(
@@ -32,14 +37,24 @@ class SettingFrame(QtWidgets.QFrame):
         self.combo_box_speed.setToolTip("List of standard COM port speeds")
         for speed in serial.Serial.BAUDRATES:
             self.combo_box_speed.addItem(str(speed), speed)
-        self.combo_box_speed.setCurrentIndex(
-            self.combo_box_speed.findData(115200))
 
+        speed = Settings.value("port_speed")
+        speed = int(speed) if speed is not None else 115200
+        self.combo_box_speed.setCurrentIndex(
+            self.combo_box_speed.findData(speed))
+        self.combo_box_speed.currentIndexChanged.connect(self.on_speed_changed)
         self.combo_box_splitter = QtWidgets.QComboBox()
         self.combo_box_splitter.addItem('CR(\\r)', b'\r')
         self.combo_box_splitter.addItem('LF(\\n)', b'\n')
+        self.combo_box_splitter.addItem('No line ending', b'')
         self.combo_box_splitter.setToolTip(
             "End-of-line character used for parsing data streams.")
+        self.combo_box_splitter.currentIndexChanged.connect(
+            self.on_splitter_changed)
+        splitter_index = Settings.value("splitter")
+        splitter_index = int(
+            splitter_index) if splitter_index is not None else 0
+        self.combo_box_splitter.setCurrentIndex(splitter_index)
 
         self.spin_box_max_points = QtWidgets.QSpinBox()
         self.spin_box_max_points.setMaximum(2147483647)
@@ -99,6 +114,16 @@ class SettingFrame(QtWidgets.QFrame):
         h_box_layout.addWidget(self.combo_box_port_path)
         h_box_layout.addWidget(self.push_button_open)
         h_box_layout.addWidget(self.combo_box_speed)
+
+    def on_port_changed(self, port_path):
+        Settings.setValue('port_path', port_path),
+
+    def on_speed_changed(self, index):
+        speed = self.combo_box_speed.itemData(index)
+        Settings.setValue("port_speed", speed)
+
+    def on_splitter_changed(self, index):
+        Settings.setValue("splitter", index)
 
 
 class ConsoleFrame(QtWidgets.QFrame):
@@ -216,7 +241,12 @@ class ConsoleFrame(QtWidgets.QFrame):
                           self.combo_box_cmd.currentIndex())
 
     def on_new_line(self, line):
-        self.plain_text_editor.appendPlainText(line.decode())
+        if self.splitter:
+            self.plain_text_editor.appendPlainText(line.decode())
+        else:
+            cursor = QtGui.QTextCursor(self.plain_text_editor.document())
+            cursor.movePosition(QtGui.QTextCursor.MoveOperation.End)
+            cursor.insertText(line.decode())
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -394,25 +424,33 @@ class MainWindow(QtWidgets.QMainWindow):
             self.plot_graph.setLabel("bottom", "time")
 
     def read_serial(self):
-        spliter = self.settings_frame.combo_box_splitter.currentData()
+        splitter = self.settings_frame.combo_box_splitter.currentData()
         with self.ser:
             while not self.exit_flag.is_set():
-                row_line = self.ser.read_until(spliter)
-                for line in row_line.splitlines():
-                    strip_line = line.strip()
-                    if self.settings_frame.check_box_show_only_cmd_response.isChecked() and\
-                            strip_line[:2] in [b'RE', b'ER']:
-                        self.NEW_LINE.emit(strip_line)
+                # row mode
+                if not splitter:
+                    symbol = self.ser.read()
+                    if symbol:
+                        self.NEW_LINE.emit(symbol)
+                else:
+                    row_line = self.ser.read_until(splitter)
+                    for line in row_line.splitlines():
+                        strip_line = line.strip()
+                        if self.settings_frame.check_box_show_only_cmd_response.isChecked() and\
+                                strip_line[:2] in [b'RE', b'ER']:
+                            self.NEW_LINE.emit(strip_line)
+                        else:
+                            self.NEW_LINE.emit(strip_line)
 
-                    data = strip_line.split()
-                    if not data:
-                        continue
-                    try:
-                        data = [float(d) for d in data]
-                        cur_time = time.time()
-                        self.put(cur_time, data)
-                    except ValueError as e:
-                        print(f'error:{e} line:{row_line}')
+                        data = strip_line.split()
+                        if not data:
+                            continue
+                        try:
+                            data = [float(d) for d in data]
+                            cur_time = time.time()
+                            self.put(cur_time, data)
+                        except ValueError as e:
+                            print(f'error:{e} line:{row_line}')
 
     def put(self, cur_time, data):
         with self.lock:
