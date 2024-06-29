@@ -43,18 +43,16 @@ class SettingFrame(QtWidgets.QFrame):
         self.combo_box_speed.setCurrentIndex(
             self.combo_box_speed.findData(speed))
         self.combo_box_speed.currentIndexChanged.connect(self.on_speed_changed)
-        self.combo_box_splitter = QtWidgets.QComboBox()
-        self.combo_box_splitter.addItem('CR(\\r)', b'\r')
-        self.combo_box_splitter.addItem('LF(\\n)', b'\n')
-        self.combo_box_splitter.addItem('No line ending', b'')
-        self.combo_box_splitter.setToolTip(
-            "End-of-line character used for parsing data streams.")
-        self.combo_box_splitter.currentIndexChanged.connect(
-            self.on_splitter_changed)
-        splitter_index = Settings.value("splitter")
-        splitter_index = int(
-            splitter_index) if splitter_index is not None else 0
-        self.combo_box_splitter.setCurrentIndex(splitter_index)
+
+        self.check_box_string_parsing = QtWidgets.QCheckBox("Line parsing")
+        self.check_box_string_parsing.setToolTip(
+            "Enable string parsing mode to display graphs")
+        self.check_box_string_parsing.toggled.connect(
+            self.on_string_parsing_changed)
+        string_parsing = Settings.value("string_parsing")
+        string_parsing = int(
+            string_parsing) if string_parsing is not None else 1
+        self.check_box_string_parsing.setChecked(string_parsing)
 
         self.spin_box_max_points = QtWidgets.QSpinBox()
         self.spin_box_max_points.setMaximum(2147483647)
@@ -95,7 +93,7 @@ class SettingFrame(QtWidgets.QFrame):
         v_box_layout.addLayout(h_box_layout_graphs)
         h_box_layout_graphs.addWidget(QtWidgets.QLabel("Max points:"))
         h_box_layout_graphs.addWidget(self.spin_box_max_points)
-        h_box_layout_graphs.addWidget(self.combo_box_splitter)
+        h_box_layout_graphs.addWidget(self.check_box_string_parsing)
         h_box_layout_graphs.addWidget(self.push_button_clear)
         h_box_layout_graphs.addWidget(self.push_button_pause)
         h_box_layout_graphs.addWidget(self.check_box_flat_mode)
@@ -122,8 +120,8 @@ class SettingFrame(QtWidgets.QFrame):
         speed = self.combo_box_speed.itemData(index)
         Settings.setValue("port_speed", speed)
 
-    def on_splitter_changed(self, index):
-        Settings.setValue("splitter", index)
+    def on_string_parsing_changed(self, value):
+        Settings.setValue("string_parsing", int(value))
 
 
 class ConsoleFrame(QtWidgets.QFrame):
@@ -226,10 +224,10 @@ class ConsoleFrame(QtWidgets.QFrame):
 
     def send(self):
         if self.ser:
-            data = self.combo_box_cmd.currentText().encode() + self.splitter
-            self.plain_text_editor.appendPlainText(
-                self.combo_box_cmd.currentText())
-
+            data = self.combo_box_cmd.currentText().encode() + b'\n'
+            cursor = QtGui.QTextCursor(self.plain_text_editor.document())
+            cursor.movePosition(QtGui.QTextCursor.MoveOperation.End)
+            cursor.insertText(data.decode())
             Settings.setValue("history", self.plain_text_editor.toPlainText())
             self.ser.write(data)
 
@@ -241,17 +239,14 @@ class ConsoleFrame(QtWidgets.QFrame):
                           self.combo_box_cmd.currentIndex())
 
     def on_new_line(self, line):
-        if self.splitter:
-            self.plain_text_editor.appendPlainText(line.decode())
-        else:
-            cursor = QtGui.QTextCursor(self.plain_text_editor.document())
-            cursor.movePosition(QtGui.QTextCursor.MoveOperation.End)
-            cursor.insertText(line.decode())
+        cursor = QtGui.QTextCursor(self.plain_text_editor.document())
+        cursor.movePosition(QtGui.QTextCursor.MoveOperation.End)
+        cursor.insertText(line.decode())
 
 
 class MainWindow(QtWidgets.QMainWindow):
     max_len = 10000
-    timeout = 2
+    timeout = 1
     GRAPH_WIDTH = 2
     COLOURS = [
         QtGui.QColor(QtCore.Qt.white),
@@ -300,7 +295,8 @@ class MainWindow(QtWidgets.QMainWindow):
                            self.settings_dock_widget)
 
         self.settings_frame.push_button_open.clicked.connect(self.on_open_port)
-        self.settings_frame.push_button_clear.clicked.connect(self.clear)
+        self.settings_frame.push_button_clear.clicked.connect(
+            self.on_clear_graphs)
         self.settings_frame.push_button_pause.clicked.connect(self.pause)
         self.settings_frame.check_box_flat_mode.toggled.connect(
             self.flat_mode_changed)
@@ -346,9 +342,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.console_dock_widget.setVisible)
 
         self.help_menu = self.menuBar().addMenu("&Help")
-        self.action_about = QtWidgets.QAction("Settings")
+        self.action_about = QtWidgets.QAction("About")
         self.help_menu.addAction(self.action_about)
         self.action_about.triggered.connect(self.on_help)
+
+    def on_clear_graphs(self):
+        self.clear(False)
 
     def on_help(self):
         QtWidgets.QMessageBox.about(
@@ -374,14 +373,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 self.serial_thread = threading.Thread(target=self.read_serial)
                 self.exit_flag.clear()
+                self.clear()
                 self.serial_thread.start()
                 self.settings_frame.push_button_open.setText("close")
                 self.settings_frame.combo_box_port_path.setEnabled(False)
                 self.settings_frame.combo_box_speed.setEnabled(False)
-                self.settings_frame.combo_box_splitter.setEnabled(False)
+                self.settings_frame.check_box_string_parsing.setEnabled(False)
                 self.console_frame.set_serial(
                     self.ser,
-                    self.settings_frame.combo_box_splitter.currentData())
+                    self.settings_frame.check_box_string_parsing.isChecked())
 
             except serial.serialutil.SerialException as e:
                 QtWidgets.QMessageBox.warning(
@@ -393,15 +393,22 @@ class MainWindow(QtWidgets.QMainWindow):
             self.settings_frame.push_button_open.setText("open")
             self.settings_frame.combo_box_port_path.setEnabled(True)
             self.settings_frame.combo_box_speed.setEnabled(True)
-            self.settings_frame.combo_box_splitter.setEnabled(True)
+            self.settings_frame.check_box_string_parsing.setEnabled(True)
             self.console_frame.set_serial(None, None)
 
-    def clear(self):
+    def clear(self, remove_items=True):
         with self.lock:
-            self.plot_graph.clear()
             self.results = {}
-            self.curves = {}
             self.points = {}
+
+            if remove_items:
+                self.plot_graph.clear()
+                self.curves = {}
+            else:
+                for _id, desc in self.curves.items():
+                    desc['time'] = []
+                    desc['val'] = []
+                    desc['curve'].clear()
 
     def pause(self):
         if self.timer.isActive():
@@ -424,33 +431,49 @@ class MainWindow(QtWidgets.QMainWindow):
             self.plot_graph.setLabel("bottom", "time")
 
     def read_serial(self):
-        splitter = self.settings_frame.combo_box_splitter.currentData()
+        is_string_parsing = self.settings_frame.check_box_string_parsing.isChecked()
         with self.ser:
-            while not self.exit_flag.is_set():
-                # row mode
-                if not splitter:
-                    symbol = self.ser.read()
+            # row mode
+            if not is_string_parsing:
+                while not self.exit_flag.is_set():
+                    symbol = self.ser.read(1)
                     if symbol:
                         self.NEW_LINE.emit(symbol)
+            # string parsing
+            else:
+                splitter = b''
+                state = 0
+                # detect string splitter
+                while not self.exit_flag.is_set():
+                    symbol = self.ser.read(1)
+                    if state == 0 and symbol not in b'\r\n':
+                        state = 1
+                    elif state == 1:
+                        if symbol in b'\r\n':
+                            splitter += symbol
+                        elif splitter:
+                            break
                 else:
-                    row_line = self.ser.read_until(splitter)
-                    for line in row_line.splitlines():
-                        strip_line = line.strip()
-                        if self.settings_frame.check_box_show_only_cmd_response.isChecked() and\
-                                strip_line[:2] in [b'RE', b'ER']:
-                            self.NEW_LINE.emit(strip_line)
-                        else:
-                            self.NEW_LINE.emit(strip_line)
+                    return
+                self.process_line(
+                    symbol + self.ser.read_until(splitter), time.time())
+                while not self.exit_flag.is_set():
+                    self.process_line(
+                        self.ser.read_until(splitter), time.time())
 
-                        data = strip_line.split()
-                        if not data:
-                            continue
-                        try:
-                            data = [float(d) for d in data]
-                            cur_time = time.time()
-                            self.put(cur_time, data)
-                        except ValueError as e:
-                            print(f'error:{e} line:{row_line}')
+    def process_line(self, row_line, cur_time):
+        strip_line = row_line.strip()
+        if strip_line:
+            if not self.settings_frame.check_box_show_only_cmd_response.isChecked() or\
+                    strip_line[:2] in [b'RE', b'ER']:
+                self.NEW_LINE.emit(strip_line + b'\n')
+            data = strip_line.split()
+            if data:
+                try:
+                    data = [float(d) for d in data]
+                    self.put(cur_time, data)
+                except ValueError as e:
+                    print(f'error:{e} line:{row_line}')
 
     def put(self, cur_time, data):
         with self.lock:
