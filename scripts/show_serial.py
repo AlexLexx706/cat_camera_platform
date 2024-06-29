@@ -224,11 +224,12 @@ class ConsoleFrame(QtWidgets.QFrame):
 
     def send(self):
         if self.ser:
-            data = self.combo_box_cmd.currentText().encode() + b'\n'
+            line = self.combo_box_cmd.currentText()
             cursor = QtGui.QTextCursor(self.plain_text_editor.document())
             cursor.movePosition(QtGui.QTextCursor.MoveOperation.End)
-            cursor.insertText(data.decode())
+            cursor.insertText(line)
             Settings.setValue("history", self.plain_text_editor.toPlainText())
+            data = line.encode()
             self.ser.write(data)
 
     def on_currentIndexChanged(self, index):
@@ -246,7 +247,7 @@ class ConsoleFrame(QtWidgets.QFrame):
 
 class MainWindow(QtWidgets.QMainWindow):
     max_len = 10000
-    timeout = 1
+    timeout = 0.5
     GRAPH_WIDTH = 2
     COLOURS = [
         QtGui.QColor(QtCore.Qt.white),
@@ -436,7 +437,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # row mode
             if not is_string_parsing:
                 while not self.exit_flag.is_set():
-                    symbol = self.ser.read(1)
+                    symbol = self.ser.read(100)
                     if symbol:
                         self.NEW_LINE.emit(symbol)
             # string parsing
