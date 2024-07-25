@@ -47,6 +47,15 @@ add_executable(icm42688_test_interrupt
   src/ICM42688/ICM42688.cpp
 )
 
+add_executable(stepper_uln2003_test
+  src/stepper_uln2003_test.cpp
+)
+
+add_executable(stepper_a4988_test
+  src/stepper_a4988_test.cpp
+)
+
+
 target_include_directories(rtos_blink_example PRIVATE ${CMAKE_CURRENT_LIST_DIR} scr)
 target_include_directories(icm42688_test_interrupt PRIVATE ${CMAKE_CURRENT_LIST_DIR} scr)
 
@@ -77,6 +86,12 @@ pico_enable_stdio_uart(rtos_blink_example 1)
 pico_enable_stdio_usb(icm42688_test_interrupt 1)
 pico_enable_stdio_uart(icm42688_test_interrupt 1)
 
+pico_enable_stdio_usb(stepper_uln2003_test 1)
+pico_enable_stdio_uart(stepper_uln2003_test 1)
+
+pico_enable_stdio_usb(stepper_a4988_test 1)
+pico_enable_stdio_uart(stepper_a4988_test 1)
+
 pico_add_extra_outputs(blink)
 pico_add_extra_outputs(motor_test)
 pico_add_extra_outputs(motor_pwm_test)
@@ -86,6 +101,8 @@ pico_add_extra_outputs(encoder_test)
 pico_add_extra_outputs(motor_servo_test)
 pico_add_extra_outputs(rtos_blink_example)
 pico_add_extra_outputs(icm42688_test_interrupt)
+pico_add_extra_outputs(stepper_uln2003_test)
+pico_add_extra_outputs(stepper_a4988_test)
 
 target_link_libraries(motor_test pico_stdlib hardware_pwm)
 target_link_libraries(blink pico_stdlib hardware_pwm)
@@ -96,3 +113,5 @@ target_link_libraries(encoder_test pico_stdlib)
 target_link_libraries(motor_servo_test pico_stdlib hardware_pwm)
 target_link_libraries(rtos_blink_example pico_stdlib FreeRTOS-Kernel-Heap4)
 target_link_libraries(icm42688_test_interrupt pico_stdlib hardware_spi FreeRTOS-Kernel-Heap4)
+target_link_libraries(stepper_uln2003_test pico_stdlib)
+target_link_libraries(stepper_a4988_test pico_stdlib)
